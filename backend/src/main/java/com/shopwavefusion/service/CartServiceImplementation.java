@@ -2,7 +2,9 @@ package com.shopwavefusion.service;
 
 import org.springframework.stereotype.Service;
 
+import com.shopwavefusion.exception.CartItemException;
 import com.shopwavefusion.exception.ProductException;
+import com.shopwavefusion.exception.UserException;
 import com.shopwavefusion.modal.Cart;
 import com.shopwavefusion.modal.CartItem;
 import com.shopwavefusion.modal.Product;
@@ -61,28 +63,39 @@ public class CartServiceImplementation implements CartService{
 	}
 
 	@Override
-	public CartItem addCartItem(Long userId, AddItemRequest req) throws ProductException {
+	public CartItem addCartItem(Long userId, AddItemRequest req) throws ProductException, CartItemException, UserException {
 		Cart cart=cartRepository.findByUserId(userId);
 		Product product=productService.findProductById(req.getProductId());
-		
+
+		if (product.getQuantity() <= 0) {
+			throw new ProductException("Producto sin stock: " + product.getTitle());
+		}
+
 		CartItem isPresent=cartItemService.isCartItemExist(cart, product, req.getSize(),userId);
 		CartItem createdCartItem=null;
 		if(isPresent == null) {
+			int qty = Math.min(req.getQuantity(), Math.min(10, product.getQuantity()));
 			CartItem cartItem = new CartItem();
 			cartItem.setProduct(product);
 			cartItem.setCart(cart);
-			cartItem.setQuantity(req.getQuantity());
+			cartItem.setQuantity(qty);
 			cartItem.setUserId(userId);
 			
-			
-			int price=req.getQuantity()*product.getDiscountedPrice();
+			int price=qty*product.getDiscountedPrice();
 			cartItem.setPrice(price);
 			cartItem.setSize(req.getSize());
 			
 			 createdCartItem=cartItemService.createCartItem(cartItem);
 			cart.getCartItems().add(createdCartItem);
+		} else {
+			int newQty = isPresent.getQuantity() + req.getQuantity();
+			newQty = Math.min(newQty, Math.min(10, product.getQuantity()));
+			isPresent.setQuantity(newQty);
+			isPresent.setPrice(newQty * product.getDiscountedPrice());
+			isPresent.setDiscountedPrice(newQty * product.getDiscountedPrice());
+			cartItemService.updateCartItem(userId, isPresent.getId(), isPresent);
+			createdCartItem = isPresent;
 		}
-		
 		
 		return createdCartItem;
 	}

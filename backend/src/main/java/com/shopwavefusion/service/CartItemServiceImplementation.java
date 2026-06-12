@@ -43,21 +43,20 @@ public class CartItemServiceImplementation implements CartItemService {
 		CartItem item=findCartItemById(id);
 		User user=userService.findUserById(item.getUserId());
 		
-		
 		if(user.getId().equals(userId)) {
-			
-			item.setQuantity(cartItem.getQuantity());
+			int maxQty = Math.min(10, item.getProduct().getQuantity());
+			int newQty = Math.min(cartItem.getQuantity(), maxQty);
+			if (newQty < 1) newQty = 1;
+
+			item.setQuantity(newQty);
 			item.setPrice(item.getQuantity()*item.getProduct().getPrice());
 			item.setDiscountedPrice(item.getQuantity()*item.getProduct().getDiscountedPrice());
 			
 			return cartItemRepository.save(item);
-				
-			
 		}
 		else {
 			throw new CartItemException("You can't update  another users cart_item");
 		}
-		
 	}
 
 	@Override

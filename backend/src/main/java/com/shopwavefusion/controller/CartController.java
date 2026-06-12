@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.shopwavefusion.exception.CartItemException;
 import com.shopwavefusion.exception.ProductException;
 import com.shopwavefusion.exception.UserException;
 import com.shopwavefusion.modal.Cart;
@@ -53,7 +54,7 @@ public class CartController {
 	}
 	
 	@PutMapping("/add")
-	public ResponseEntity<CartItem> addItemToCart(@RequestBody AddItemRequest req, @RequestHeader("Authorization") String jwt) throws UserException, ProductException{
+	public ResponseEntity<CartItem> addItemToCart(@RequestBody AddItemRequest req, @RequestHeader("Authorization") String jwt) throws UserException, ProductException, CartItemException{
 		
 		User user=userService.findUserProfileByJwt(jwt);
 		
