@@ -25,22 +25,33 @@ public class AdminInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // Check if admin user already exists
-        if (userRepository.findByEmail("admin@example.com") == null) {
-            User adminUser = new User();
-            adminUser.setEmail("admin@example.com");
-            adminUser.setFirstName("Admin");
-            adminUser.setLastName("Admin");
-            adminUser.setMobile("1234567890");
-            adminUser.setPassword(passwordEncoder.encode("admin"));
-            adminUser.setRole("ROLE_ADMIN");
-            adminUser.setCreatedAt(LocalDateTime.now());
+        if (userRepository.findByEmail("admin@example.com") != null) {
+            return;
+        }
 
-            User savedAdminUser = userRepository.save(adminUser);
+        User adminUser = new User();
+        adminUser.setEmail("admin@example.com");
+        adminUser.setFirstName("Admin");
+        adminUser.setLastName("Admin");
+        adminUser.setMobile("1234567890");
+        adminUser.setPassword(passwordEncoder.encode("admin"));
+        adminUser.setRole("ROLE_ADMIN");
+        adminUser.setCreatedAt(LocalDateTime.now());
 
-          
-             cartService.createCart(savedAdminUser);
-           
+        userRepository.save(adminUser);
+        userRepository.flush();
+
+        User reloadedAdmin = userRepository.findByEmail("admin@example.com");
+        if (reloadedAdmin == null) {
+            System.err.println("[AdminInitializer] No se pudo recargar el admin despues de guardarlo.");
+            return;
+        }
+
+        try {
+            cartService.createCart(reloadedAdmin);
+            System.out.println("[AdminInitializer] Admin y cart creados OK.");
+        } catch (Exception e) {
+            System.err.println("[AdminInitializer] Error creando cart (no critico, seguimos): " + e.getMessage());
         }
     }
 }
