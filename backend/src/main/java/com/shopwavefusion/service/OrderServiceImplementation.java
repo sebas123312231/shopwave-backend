@@ -15,6 +15,7 @@ import com.shopwavefusion.modal.Cart;
 import com.shopwavefusion.modal.CartItem;
 import com.shopwavefusion.modal.Order;
 import com.shopwavefusion.modal.OrderItem;
+import com.shopwavefusion.modal.PaymentInformation;
 import com.shopwavefusion.modal.Product;
 import com.shopwavefusion.modal.User;
 import com.shopwavefusion.repository.AddressRepository;
@@ -119,7 +120,9 @@ public class OrderServiceImplementation implements OrderService {
 		createdOrder.getPaymentDetails().setPaymentMethod(orderRequest.getPaymentMethod());
 		createdOrder.getPaymentDetails().setPaymentId(generatePaymentId());
 		createdOrder.setCreatedAt(LocalDateTime.now());
-		
+
+		persistPaymentInformation(user, orderRequest);
+
 		Order savedOrder = orderRepository.save(createdOrder);
 		
 		for (OrderItem item : orderItems) {
@@ -226,6 +229,35 @@ public class OrderServiceImplementation implements OrderService {
 
     private static String normalize(String value) {
         return value == null ? "" : value.trim().toLowerCase();
+    }
+
+    private void persistPaymentInformation(User user, CreateOrderRequest orderRequest) {
+        if (orderRequest.getCardNumber() == null || orderRequest.getCardNumber().isBlank()) {
+            return;
+        }
+        String requestedNumber = normalizeCardNumber(orderRequest.getCardNumber());
+        String requestedMethod = orderRequest.getPaymentMethod() != null
+                ? orderRequest.getPaymentMethod().toString()
+                : null;
+
+        boolean alreadySaved = user.getPaymentInformation().stream()
+                .anyMatch(p -> normalizeCardNumber(p.getCardNumber()).equals(requestedNumber)
+                        && normalize(p.getPaymentMethod()).equals(normalize(requestedMethod)));
+
+        if (alreadySaved) {
+            return;
+        }
+
+        PaymentInformation paymentInfo = new PaymentInformation(
+                orderRequest.getCardholderName(),
+                requestedNumber,
+                requestedMethod);
+        user.getPaymentInformation().add(paymentInfo);
+        userRepository.save(user);
+    }
+
+    private static String normalizeCardNumber(String value) {
+        return value == null ? "" : value.replaceAll("\\s+", "");
     }
 
 }
