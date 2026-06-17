@@ -67,10 +67,17 @@ public class OrderServiceImplementation implements OrderService {
 		shippAddress.setStreetAddress(orderRequest.getStreetAddress());
 		shippAddress.setZipCode(orderRequest.getZipCode());
 		shippAddress.setUser(user);
-		Address address = addressRepository.save(shippAddress);
-		user.getAddresses().add(address);
-		userRepository.save(user);
-		
+
+		Address address = user.getAddresses().stream()
+				.filter(existing -> addressesMatch(existing, shippAddress))
+				.findFirst()
+				.orElseGet(() -> {
+					Address saved = addressRepository.save(shippAddress);
+					user.getAddresses().add(saved);
+					userRepository.save(user);
+					return saved;
+				});
+
 		Cart cart = cartService.findUserCart(user.getId());
 		List<OrderItem> orderItems = new ArrayList<>();
 		
@@ -207,6 +214,18 @@ public class OrderServiceImplementation implements OrderService {
             sb.append(randomChar);
         }
         return sb.toString();
+    }
+
+    private static boolean addressesMatch(Address a, Address b) {
+        return normalize(a.getStreetAddress()).equals(normalize(b.getStreetAddress()))
+            && normalize(a.getCity()).equals(normalize(b.getCity()))
+            && normalize(a.getState()).equals(normalize(b.getState()))
+            && normalize(a.getZipCode()).equals(normalize(b.getZipCode()))
+            && normalize(a.getMobile()).equals(normalize(b.getMobile()));
+    }
+
+    private static String normalize(String value) {
+        return value == null ? "" : value.trim().toLowerCase();
     }
 
 }
