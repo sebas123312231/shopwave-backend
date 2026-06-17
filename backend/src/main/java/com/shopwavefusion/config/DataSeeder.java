@@ -398,22 +398,27 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     /**
-     * Crea un Set<Size> a partir de pares nombre/cantidad. Garantiza que la
-     * suma de cantidades sea exactamente la indicada en totalQty, para que
-     * el campo sizes del producto no rompa la invariante del stock total.
+     * Crea un Set<Size> a partir de pares nombre/cantidad intercalados.
+     * Acepta Object... para permitir mezclar String y valores numericos
+     * (int, Integer) en la llamada: t("S", 10, "M", 15, ...).
      */
-    private static Set<Size> t(String... nameQtyPairs) {
+    private static Set<Size> t(Object... nameQtyPairs) {
         if (nameQtyPairs == null || nameQtyPairs.length == 0 || nameQtyPairs.length % 2 != 0) {
             return new HashSet<>();
         }
         Set<Size> result = new HashSet<>();
         for (int i = 0; i < nameQtyPairs.length; i += 2) {
-            String name = nameQtyPairs[i];
-            int qty;
-            try {
-                qty = Integer.parseInt(nameQtyPairs[i + 1]);
-            } catch (NumberFormatException ex) {
-                qty = 0;
+            String name = String.valueOf(nameQtyPairs[i]);
+            int qty = 0;
+            Object raw = nameQtyPairs[i + 1];
+            if (raw instanceof Number) {
+                qty = ((Number) raw).intValue();
+            } else {
+                try {
+                    qty = Integer.parseInt(String.valueOf(raw));
+                } catch (NumberFormatException ex) {
+                    qty = 0;
+                }
             }
             Size s = new Size();
             s.setName(name);
