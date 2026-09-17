@@ -1,263 +1,31 @@
-### ShopWave Fusion E-Commerce Application Backend
-<hr/>
-<p>Welcome to the ShopWave Fusion E-Commerce Application Backend. This project is built using Spring Boot and incorporates Spring Security with JWT Token-based authorization for secure access. The backend serves as the core foundation for the ShopWave Fusion E-Commerce Application, providing the necessary functionality to manage products, orders, user authentication, and more.</p>
+# ShopWave API v1
 
-## Introduction
-<p>This backend application can be integrated with any frontend UI application. You just need to follow few Steps.</p>
+Implementación Spring Boot del rework de ShopWave. El código activo vive bajo `com.shopwavefusion.rework`; el contrato REST está en [`openapi/shopwave-v1.yaml`](openapi/shopwave-v1.yaml).
 
-## Features
-- User and Admin registration and login with JWT authentication
-- Password encryption using BCrypt
-- Role-based authorization with Spring Security
-- User Module
-- Admin Module
-## Tech Stack
-- Java
-- Spring
-- Spring Boot
-- Spring Security
-- MySql
-## Installation
-<p>Clone this repository..</p>
+## Comandos
 
-## Database Schema
-
-![Schema](https://github.com/DEEPAKKUMARMAHASETH/shopwavefusionbackend/assets/71522419/6c5a4105-7c51-4005-b2c9-ea97426db5ea)
-
-## For Login
-
-<p>Here is the sample Javascript code..</p>
-
-```
-async function fetchUserDetails() {
-    const username = 'admin@gmail.com';
-    const password = 'admin';
-    
-     const authHeader = 'Basic ' + btoa(username + ':' + password);
-    
-    
-      try {
-       const response = await fetch('https://shopwavefusion-production.up.railway.app/auth/signin', {
-        method: 'GET',
-        headers: {
-          'Authorization': authHeader
-          }
-       });
-        if (response.ok) {
-         console.log(response.headers.get("Authorization"));
-         const user = await response.json();
-         console.log(user);
-       } else {
-          throw new Error('Failed to fetch user details');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-       throw error;
-     }
-    }
-```
-## To Register a user
-
-`https://shopwavefusion-production.up.railway.app/auth/signup`
-
-## Body
-
-```
-{
-    "firstName":"user",
-    "lastName":"user",
-    "email":"user2@gmail.com",
-    "password":"1234",
-    "mobile":"1234567890"
-}
-
+```powershell
+./mvnw.cmd test
+./mvnw.cmd verify -Pintegration
 ```
 
-<p>For other API request send the "Authorization Token" along with header</p>
+`application-test.properties` usa H2 efímero y un secreto exclusivo de tests. No representa paridad de producción con MySQL. Para una verificación de persistencia real se necesita un MySQL de test aislado o Docker; nunca se usan datos del dueño del proyecto.
 
-## here is the sample code
+## Variables mínimas
 
-```
-to get product
-async function getproduct() {
-  let token = Stored Token from session Strorage or Local Storage
-  
-  const myHeaders = new Headers();
-  myHeaders.append("Authorization", token);
+La aplicación requiere `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` y `APP_ORIGIN` cuando corre con los perfiles `local`, `demo` o `prod`. `JWT_SECRET` debe tener al menos 32 bytes. Los seeders y el admin demo están desactivados por defecto.
 
-  const requestOptions = {
-    method: 'GET',
-    headers: myHeaders,
-    redirect: 'follow'
-  };
+## API y seguridad
 
-  try {
-    const response = await fetch("https://shopwavefusion-production.up.railway.app/all", requestOptions);
-    
-    if (response.ok) {
-      const data = await response.json();
-      console.log(data);
-    } else {
-      console.log("Response not OK:", response);
-    }
-  } catch (error) {
-    console.error('Error:', error);
-  }
-}
-```
-## For Admin Login 
-<p>
-    There is a predefined admin credentials (email: "admin@example.com", password: "admin") in the config package with the class name AdminInitializer If you want you can use this admin as super admin also you can avoid this admin.
-    Or you can change accordingly. if you don't want this then you can also delete this.
-</p>
+- `POST /api/v1/auth/register`, `POST /api/v1/auth/login` y `POST /api/v1/auth/logout`.
+- Catálogo público paginado en `products`, `categories` y `products/facets`.
+- Perfil, direcciones, carrito y órdenes requieren Bearer válido.
+- Admin requiere `ROLE_ADMIN` y validación de versión para cambios.
+- CORS acepta únicamente los orígenes configurados.
+- Las respuestas de error son `application/problem+json`.
+- Checkout calcula totales en servidor, usa locks, snapshots e `Idempotency-Key`.
+- El pago es explícitamente `MOCK/SIMULATED`; nunca se reciben datos de tarjeta.
 
-## API endpoint.
+## Datos demo
 
-<p>To add product into cart</p>
-
-`https://shopwavefusion-production.up.railway.app/cart/add` 
-
-according to the domain add /cart/add "PUT MAPPING"<br/>
-
-## Body
-
-```
-{
-    "productId":2,
-    "size":"M"
-}
-```
-
-<p>Cart</p>
-
-`http://localhost:8080](https://shopwavefusion-production.up.railway.app/cart/` 
-
-according to the domain add /cart/ "GET MAPPING"<br/>
-
-<p>To add Product</p>
-
-`https://shopwavefusion-production.up.railway.app/products/`
-
-## Body
-
-```
-{
-  "title": "Sample Product",
-  "description": "This is a sample product description.",
-  "price": 2999,
-  "discountedPrice": 2499,
-  "discountPersent": 20,
-  "quantity": 45,
-  "brand": "Example Brand",
-  "color": "Blue",
-  "size": [
-    {
-      "name": "S",
-      "quantity": 10
-    },
-    {
-      "name": "M",
-      "quantity": 20
-    },
-    {
-      "name": "L",
-      "quantity": 15
-    }
-  ],
-  "imageUrl": "https://example.com/image.jpg",
-  "topLevelCategory": "Clothing",
-  "secondLevelCategory": "T-Shirts",
-  "thirdLevelCategory": "Men's T-Shirts"
-}
-
-```
-
-<p>To add multiple Product</p>
-
-`https://shopwavefusion-production.up.railway.app/admin/products/creates`
-
-```
-[
-  {
-    "title": "Sample Product 1",
-    "description": "This is a sample product description.",
-    "price": 2999,
-    "discountedPrice": 2499,
-    "discountPersent": 20,
-    "quantity": 100,
-    "brand": "Example Brand",
-    "color": "Blue",
-    "size": [
-      {
-        "name": "S",
-        "quantity": 10
-      },
-      {
-        "name": "M",
-        "quantity": 20
-      }
-    ],
-    "imageUrl": "https://example.com/image1.jpg",
-    "topLavelCategory": "Clothing",
-    "secondLavelCategory": "T-Shirts",
-    "thirdLavelCategory": "Men's T-Shirts"
-  },
-  {
-    "title": "Sample Product 2",
-    "description": "Another sample product description.",
-    "price": 1999,
-    "discountedPrice": 1799,
-    "discountPersent": 10,
-    "quantity": 50,
-    "brand": "Another Brand",
-    "color": "Red",
-    "size": [
-      {
-        "name": "M",
-        "quantity": 15
-      },
-      {
-        "name": "L",
-        "quantity": 10
-      }
-    ],
-    "imageUrl": "https://example.com/image2.jpg",
-    "topLavelCategory": "Clothing",
-    "secondLavelCategory": "Shirts",
-    "thirdLavelCategory": "Men's Shirts"
-  }
-]
-```
-
-
-<p>To get Product</p>
-
-`https://shopwavefusion-production.up.railway.app/{product_id}`
-
-<p>To place a order</p>
-
-```
-{
-  "firstName": "John",
-  "lastName": "Doe",
-  "streetAddress": "123 Main St",
-  "city": "Example City",
-  "state": "Example State",
-  "zipCode": "12345",
-  "mobile": "123-456-7890",
-  "paymentMethod": "CREDIT_CARD",
-  "status": "PENDING",
-  "paymentId": "123456789",
-  "cardholderName": "John Doe",
-  "cardNumber": "**** **** **** 1234"
-}
-```
-<p>Only pass this object</p>
-
-<p>For the all api's visit Swagger documentation</p>
-
-`https://shopwavefusion-production.up.railway.app/swagger-ui/index.html`
-
-<P>For Pagination and Sorting and Filtering Use this endpoint setValue as needed</P>
-
-`https://shopwavefusion-production.up.railway.app/products/all?category&colors&sizes&minPrice=1&maxPrice=1000&minDiscount&sort&stock&pageNumber=1&pageSize=2`
+Activa `SHOPWAVE_SEED_ENABLED=true` sólo contra una base demo nueva. Para crear un admin demo se requieren `SHOPWAVE_DEMO_ADMIN_ENABLED=true` y `SHOPWAVE_DEMO_ADMIN_PASSWORD` en el entorno local. No se imprimen ni se documentan credenciales.
