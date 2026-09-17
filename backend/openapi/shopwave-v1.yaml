@@ -1,0 +1,521 @@
+openapi: 3.0.3
+info:
+  title: ShopWave API
+  version: 1.0.0
+  description: Contract for the ShopWave portfolio rework. Payments are explicitly simulated.
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: Auth
+  - name: Catalog
+  - name: Account
+  - name: Commerce
+  - name: Admin
+paths:
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RegisterRequest' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/LoginRequest' } } }
+      responses:
+        '200': { description: Authenticated, content: { application/json: { schema: { $ref: '#/components/schemas/TokenResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      responses:
+        '204': { description: Revoked }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/products:
+    get:
+      tags: [Catalog]
+      security: []
+      parameters:
+        - { $ref: '#/components/parameters/Q' }
+        - { $ref: '#/components/parameters/CategoryId' }
+        - { name: color, in: query, style: form, explode: true, schema: { type: array, items: { type: string } } }
+        - { name: variantLabel, in: query, style: form, explode: true, schema: { type: array, items: { type: string } } }
+        - { name: minPriceMinor, in: query, schema: { type: integer, format: int64, minimum: 0 } }
+        - { name: maxPriceMinor, in: query, schema: { type: integer, format: int64, minimum: 0 } }
+        - { name: inStock, in: query, schema: { type: boolean } }
+        - { name: sort, in: query, schema: { type: string, enum: [newest, price_asc, price_desc, discount_desc], default: newest } }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+      responses:
+        '200': { description: Page, content: { application/json: { schema: { $ref: '#/components/schemas/ProductPage' } } } }
+  /api/v1/products/facets:
+    get:
+      tags: [Catalog]
+      security: []
+      responses:
+        '200': { description: Facets, content: { application/json: { schema: { $ref: '#/components/schemas/Facets' } } } }
+  /api/v1/products/{id}:
+    get:
+      tags: [Catalog]
+      security: []
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Product, content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/categories:
+    get:
+      tags: [Catalog]
+      security: []
+      responses:
+        '200': { description: Categories, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Category' } } } } }
+  /api/v1/me:
+    get:
+      tags: [Account]
+      responses:
+        '200': { description: Current user, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      tags: [Account]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ProfileUpdateRequest' } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/me/addresses:
+    get:
+      tags: [Account]
+      responses:
+        '200': { description: Saved addresses, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Address' } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/cart:
+    get:
+      tags: [Commerce]
+      responses:
+        '200': { description: Current cart, content: { application/json: { schema: { $ref: '#/components/schemas/Cart' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/cart/items:
+    post:
+      tags: [Commerce]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AddCartItemRequest' } } }
+      responses:
+        '200': { description: Updated cart, content: { application/json: { schema: { $ref: '#/components/schemas/Cart' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/cart/items/{id}:
+    patch:
+      tags: [Commerce]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/UpdateCartItemRequest' } } }
+      responses:
+        '200': { description: Updated cart, content: { application/json: { schema: { $ref: '#/components/schemas/Cart' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [Commerce]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '204': { description: Removed }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/orders:
+    get:
+      tags: [Commerce]
+      parameters: [{ $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/Size' }]
+      responses:
+        '200': { description: Orders, content: { application/json: { schema: { $ref: '#/components/schemas/OrderPage' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Commerce]
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CheckoutRequest' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Order' } } } }
+        '200': { description: Idempotent replay, content: { application/json: { schema: { $ref: '#/components/schemas/Order' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/orders/{id}:
+    get:
+      tags: [Commerce]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Order, content: { application/json: { schema: { $ref: '#/components/schemas/Order' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/admin/summary:
+    get:
+      tags: [Admin]
+      responses:
+        '200': { description: Dashboard summary, content: { application/json: { schema: { $ref: '#/components/schemas/AdminSummary' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/admin/products:
+    get:
+      tags: [Admin]
+      parameters: [{ $ref: '#/components/parameters/Q' }, { $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/Size' }]
+      responses:
+        '200': { description: Admin products, content: { application/json: { schema: { $ref: '#/components/schemas/ProductPage' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Admin]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ProductWriteRequest' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/admin/products/{id}:
+    get:
+      tags: [Admin]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Product, content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Admin]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ProductWriteRequest' } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/admin/products/{id}/archive:
+    patch:
+      tags: [Admin]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ArchiveRequest' } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/admin/orders:
+    get:
+      tags: [Admin]
+      parameters: [{ $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/Size' }, { name: status, in: query, schema: { type: string, enum: [PLACED, CONFIRMED, SHIPPED, DELIVERED, CANCELLED] } }]
+      responses:
+        '200': { description: Admin orders, content: { application/json: { schema: { $ref: '#/components/schemas/AdminOrderPage' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/admin/orders/{id}:
+    get:
+      tags: [Admin]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Admin order, content: { application/json: { schema: { $ref: '#/components/schemas/AdminOrder' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/admin/orders/{id}/status:
+    patch:
+      tags: [Admin]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/StatusRequest' } } }
+      responses:
+        '200': { description: Updated order, content: { application/json: { schema: { $ref: '#/components/schemas/AdminOrder' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    Q: { name: q, in: query, schema: { type: string, maxLength: 100 } }
+    CategoryId: { name: categoryId, in: query, schema: { type: string, format: uuid } }
+    Page: { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+    Size: { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 48, default: 12 } }
+    IdempotencyKey: { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+  responses:
+    BadRequest: { description: Invalid request, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+    Unauthorized: { description: Authentication required, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+    Forbidden: { description: Permission denied, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+    NotFound: { description: Not found, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+    Conflict: { description: State conflict, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+    RateLimited: { description: Too many attempts, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code, detail, instance, traceId, fieldErrors]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string }
+        detail: { type: string }
+        instance: { type: string }
+        traceId: { type: string }
+        fieldErrors: { type: array, items: { type: object, required: [field, message], properties: { field: { type: string }, message: { type: string } } } }
+    User:
+      type: object
+      required: [id, email, firstName, lastName, mobile, role, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        firstName: { type: string }
+        lastName: { type: string }
+        mobile: { type: string }
+        role: { type: string, enum: [USER, ADMIN] }
+        createdAt: { type: string, format: date-time }
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [firstName, lastName, email, password, mobile]
+      properties:
+        firstName: { type: string, maxLength: 80 }
+        lastName: { type: string, maxLength: 80 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 12, maxLength: 72, format: password }
+        mobile: { type: string }
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties: { email: { type: string, format: email }, password: { type: string, format: password } }
+    ProfileUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [firstName, lastName, mobile]
+      properties: { firstName: { type: string }, lastName: { type: string }, mobile: { type: string } }
+    TokenResponse:
+      type: object
+      required: [accessToken, user, expiresAt]
+      properties:
+        accessToken: { type: string }
+        user: { $ref: '#/components/schemas/User' }
+        expiresAt: { type: string, format: date-time }
+    Category:
+      type: object
+      required: [id, name, parentId, path]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        parentId: { type: string, format: uuid, nullable: true }
+        path: { type: array, items: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } } }
+    Variant:
+      type: object
+      required: [id, label, stock, active]
+      properties: { id: { type: string, format: uuid }, label: { type: string }, stock: { type: integer, minimum: 0 }, active: { type: boolean } }
+    Product:
+      type: object
+      required: [id, title, description, brand, color, imageUrl, priceMinor, salePriceMinor, currency, discountPercent, stockTotal, variants, category, active, version, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        brand: { type: string }
+        color: { type: string }
+        imageUrl: { type: string, format: uri }
+        priceMinor: { type: integer, format: int64, minimum: 0 }
+        salePriceMinor: { type: integer, format: int64, minimum: 0 }
+        currency: { type: string, enum: [BOB] }
+        discountPercent: { type: integer, minimum: 0 }
+        stockTotal: { type: integer, minimum: 0 }
+        variants: { type: array, items: { $ref: '#/components/schemas/Variant' } }
+        category: { $ref: '#/components/schemas/Category' }
+        active: { type: boolean }
+        version: { type: integer, format: int64, minimum: 0 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ProductPage:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties: { items: { type: array, items: { $ref: '#/components/schemas/Product' } } }
+    Page:
+      type: object
+      required: [items, page, size, totalItems, totalPages]
+      properties:
+        items: { type: array, items: {} }
+        page: { type: integer }
+        size: { type: integer }
+        totalItems: { type: integer, format: int64 }
+        totalPages: { type: integer }
+    Facets:
+      type: object
+      required: [categories, colors, variantLabels, minPriceMinor, maxPriceMinor]
+      properties:
+        categories: { type: array, items: { $ref: '#/components/schemas/Category' } }
+        colors: { type: array, items: { type: string } }
+        variantLabels: { type: array, items: { type: string } }
+        minPriceMinor: { type: integer, format: int64 }
+        maxPriceMinor: { type: integer, format: int64 }
+    Address:
+      type: object
+      required: [firstName, lastName, streetAddress, city, department, mobile, country]
+      properties:
+        id: { type: string, format: uuid, nullable: true }
+        firstName: { type: string }
+        lastName: { type: string }
+        streetAddress: { type: string }
+        city: { type: string }
+        department: { type: string }
+        postalCode: { type: string, nullable: true }
+        mobile: { type: string }
+        country: { type: string, enum: [BO] }
+    CartItem:
+      type: object
+      required: [id, variantId, productId, title, imageUrl, variantLabel, quantity, stockAvailable, unitPriceMinor, unitSalePriceMinor, lineTotalMinor, available]
+      properties:
+        id: { type: string, format: uuid }
+        variantId: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        title: { type: string }
+        imageUrl: { type: string, format: uri }
+        variantLabel: { type: string }
+        quantity: { type: integer, minimum: 1, maximum: 10 }
+        stockAvailable: { type: integer, minimum: 0 }
+        unitPriceMinor: { type: integer, format: int64 }
+        unitSalePriceMinor: { type: integer, format: int64 }
+        lineTotalMinor: { type: integer, format: int64 }
+        available: { type: boolean }
+    Cart:
+      type: object
+      required: [id, version, quoteFingerprint, items, subtotalMinor, discountMinor, totalMinor, totalQuantity, currency]
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: integer, format: int64 }
+        quoteFingerprint: { type: string }
+        items: { type: array, items: { $ref: '#/components/schemas/CartItem' } }
+        subtotalMinor: { type: integer, format: int64 }
+        discountMinor: { type: integer, format: int64 }
+        totalMinor: { type: integer, format: int64 }
+        totalQuantity: { type: integer }
+        currency: { type: string, enum: [BOB] }
+    AddCartItemRequest:
+      type: object
+      additionalProperties: false
+      required: [variantId, quantity]
+      properties: { variantId: { type: string, format: uuid }, quantity: { type: integer, minimum: 1, maximum: 10 } }
+    UpdateCartItemRequest:
+      type: object
+      additionalProperties: false
+      required: [quantity]
+      properties: { quantity: { type: integer, minimum: 1, maximum: 10 } }
+    CheckoutRequest:
+      type: object
+      additionalProperties: false
+      required: [address, paymentMethod, cartVersion, quoteFingerprint]
+      properties:
+        address: { $ref: '#/components/schemas/AddressInput' }
+        saveAddress: { type: boolean }
+        paymentMethod: { type: string, enum: [MOCK] }
+        cartVersion: { type: integer, format: int64, minimum: 0 }
+        quoteFingerprint: { type: string }
+    AddressInput:
+      allOf:
+        - $ref: '#/components/schemas/Address'
+        - type: object
+          properties: { id: { nullable: true } }
+    OrderItem:
+      allOf:
+        - $ref: '#/components/schemas/CartItem'
+        - type: object
+          properties: { unitPriceMinor: { type: integer, format: int64 }, unitSalePriceMinor: { type: integer, format: int64 } }
+    Payment:
+      type: object
+      required: [method, status, reference]
+      properties: { method: { type: string, enum: [MOCK] }, status: { type: string, enum: [SIMULATED, VOIDED] }, reference: { type: string } }
+    Order:
+      type: object
+      required: [id, number, status, version, createdAt, deliveredAt, shippingAddress, items, subtotalMinor, discountMinor, totalMinor, totalQuantity, currency, payment, allowedTransitions]
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: string }
+        status: { type: string, enum: [PLACED, CONFIRMED, SHIPPED, DELIVERED, CANCELLED] }
+        version: { type: integer, format: int64 }
+        createdAt: { type: string, format: date-time }
+        deliveredAt: { type: string, format: date-time, nullable: true }
+        shippingAddress: { $ref: '#/components/schemas/Address' }
+        items: { type: array, items: { $ref: '#/components/schemas/OrderItem' } }
+        subtotalMinor: { type: integer, format: int64 }
+        discountMinor: { type: integer, format: int64 }
+        totalMinor: { type: integer, format: int64 }
+        totalQuantity: { type: integer }
+        currency: { type: string, enum: [BOB] }
+        payment: { $ref: '#/components/schemas/Payment' }
+        allowedTransitions: { type: array, items: { type: string } }
+    OrderPage:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties: { items: { type: array, items: { $ref: '#/components/schemas/Order' } } }
+    AdminOrder:
+      allOf:
+        - $ref: '#/components/schemas/Order'
+        - type: object
+          required: [customer]
+          properties: { customer: { $ref: '#/components/schemas/User' } }
+    AdminOrderPage:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties: { items: { type: array, items: { $ref: '#/components/schemas/AdminOrder' } } }
+    ProductWriteRequest:
+      type: object
+      additionalProperties: false
+      required: [title, description, brand, color, categoryId, imageUrl, priceMinor, salePriceMinor, variants]
+      properties:
+        title: { type: string, maxLength: 160 }
+        description: { type: string, maxLength: 4000 }
+        brand: { type: string, maxLength: 80 }
+        color: { type: string, maxLength: 40 }
+        categoryId: { type: string, format: uuid }
+        imageUrl: { type: string, format: uri }
+        priceMinor: { type: integer, format: int64, minimum: 1 }
+        salePriceMinor: { type: integer, format: int64, minimum: 1 }
+        variants: { type: array, minItems: 1, items: { $ref: '#/components/schemas/VariantWrite' } }
+        active: { type: boolean }
+        version: { type: integer, format: int64, minimum: 0 }
+    VariantWrite:
+      type: object
+      additionalProperties: false
+      required: [label, stock, active]
+      properties: { id: { type: string, format: uuid, nullable: true }, label: { type: string, maxLength: 30 }, stock: { type: integer, minimum: 0 }, active: { type: boolean } }
+    ArchiveRequest:
+      type: object
+      additionalProperties: false
+      required: [active, version]
+      properties: { active: { type: boolean }, version: { type: integer, format: int64, minimum: 0 } }
+    StatusRequest:
+      type: object
+      additionalProperties: false
+      required: [status, version]
+      properties: { status: { type: string, enum: [PLACED, CONFIRMED, SHIPPED, DELIVERED, CANCELLED] }, version: { type: integer, format: int64, minimum: 0 } }
+    AdminSummary:
+      type: object
+      required: [activeProducts, ordersPlaced, ordersConfirmed, simulatedSalesMinor, currency, periodStart, periodEnd]
+      properties:
+        activeProducts: { type: integer, format: int64 }
+        ordersPlaced: { type: integer, format: int64 }
+        ordersConfirmed: { type: integer, format: int64 }
+        simulatedSalesMinor: { type: integer, format: int64 }
+        currency: { type: string, enum: [BOB] }
+        periodStart: { type: string, format: date-time }
+        periodEnd: { type: string, format: date-time }
